@@ -7,6 +7,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+// 403 forbidden 처리
 @Component
 public class JwtAccessDeniedHandler implements AccessDeniedHandler {
     @Override

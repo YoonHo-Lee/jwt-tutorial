@@ -6,6 +6,8 @@ import java.util.Optional;
 import com.example.jwttest.dto.UserDto;
 import com.example.jwttest.entity.Authority;
 import com.example.jwttest.entity.User;
+import com.example.jwttest.exception.DuplicateMemberException;
+import com.example.jwttest.exception.NotFoundMemberException;
 import com.example.jwttest.repository.UserRepository;
 import com.example.jwttest.util.SecurityUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,9 +25,9 @@ public class UserService {
     }
 
     @Transactional
-    public User signup(UserDto userDto) {
+    public UserDto signup(UserDto userDto) {
         if (userRepository.findOneWithAuthoritiesByUsername(userDto.getUsername()).orElse(null) != null) {
-            throw new RuntimeException("이미 가입되어 있는 유저입니다.");
+            throw new DuplicateMemberException("이미 가입되어 있는 유저입니다.");
         }
 
         Authority authority = Authority.builder()
@@ -40,16 +42,22 @@ public class UserService {
                 .activated(true)
                 .build();
 
-        return userRepository.save(user);
+        return UserDto.from(userRepository.save(user));
     }
 
+    // 입력받은 username에 해당하는 정보를 가져옴.
     @Transactional(readOnly = true)
-    public Optional<User> getUserWithAuthorities(String username) {         // 입력받은 username에 해당하는 정보를 가져옴.
-        return userRepository.findOneWithAuthoritiesByUsername(username);
+    public UserDto getUserWithAuthorities(String username) {
+        return UserDto.from(userRepository.findOneWithAuthoritiesByUsername(username).orElse(null));
     }
 
+    // Security Context에 저장된 username의 정보만 가져옴.
     @Transactional(readOnly = true)
-    public Optional<User> getMyUserWithAuthorities() {                      // Security Context에 저장된 username의 정보만 가져옴.
-        return SecurityUtil.getCurrentUsername().flatMap(userRepository::findOneWithAuthoritiesByUsername);
+    public UserDto getMyUserWithAuthorities() {
+        return UserDto.from(
+                SecurityUtil.getCurrentUsername()
+                        .flatMap(userRepository::findOneWithAuthoritiesByUsername)
+                        .orElseThrow(() -> new NotFoundMemberException("Member not found"))
+        );
     }
 }
